@@ -46,7 +46,7 @@ class DAQ_1DViewer_Omnidriver(DAQ_Viewer_base):
 
 
     def __init__(self,parent=None,params_state=None): #init_params is a list of tuple where each tuple contains info on a 1D channel (Ntps,amplitude, width, position and noise)
-        super(DAQ_1DViewer_OceanOptics,self).__init__(parent,params_state)
+        super().__init__(parent,params_state)
 
 
         self.controller=None
