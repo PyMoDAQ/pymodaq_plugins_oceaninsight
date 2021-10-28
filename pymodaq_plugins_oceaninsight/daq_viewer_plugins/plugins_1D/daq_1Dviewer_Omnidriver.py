@@ -1,4 +1,4 @@
-from PyQt5 import QtWidgets
+from qtpy import QtWidgets
 from pymodaq.daq_viewer.utility_classes import DAQ_Viewer_base
 import numpy as np
 from collections import OrderedDict
