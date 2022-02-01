@@ -19,14 +19,15 @@ Authors
 =======
 
 * Sebastien J. Weber
+* Nicolas Tappy
 
 Instruments
 ===========
-Below is the list of instruments included in this plugin
-
+Below is the list of instruments included in this plugin.
+Url: https://www.oceaninsight.com/products/spectrometers/
 
 Viewer1D
 ++++++++
 
 * **Omnidriver**: Control of Spectrometer using the Omnidriver library (should be installed)
-
+* **Seabreeze** : If the Omnidriver library is not available, a plugin implementation based on seabreeze is provided: https://python-seabreeze.readthedocs.io/en/latest/index.html
