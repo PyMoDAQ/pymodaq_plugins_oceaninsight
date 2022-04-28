@@ -162,7 +162,7 @@ class DAQ_1DViewer_Omnidriver(DAQ_Viewer_base):
                     self.controller.setScansToAverage(ind_spectro,Naverage)
                     data_chelou=self.controller.getSpectrum(ind_spectro)
                     data=np.array([data_chelou[ind] for ind in range(len(data_chelou))])
-                    datas.append(DataFromPlugins(name=self.spectro_names[ind_spectro],data=[data], dim='Data1D'))
+                    datas.append(DataFromPlugins(name=self.spectro_names[ind_spectro],data=[data], dim='Data1D', x_axis=self.x_axis[ind_spectro]))
                     QtWidgets.QApplication.processEvents()
 
             self.data_grabed_signal.emit(datas)
