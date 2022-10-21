@@ -9,8 +9,8 @@ pymodaq_plugins_oceaninsight (Ocean Insight (Optics) Spectrometers)
    :target: https://pymodaq.readthedocs.io/en/stable/?badge=latest
    :alt: Documentation Status
 
-.. image:: https://github.com/CEMES-CNRS/pymodaq_plugins_oceaninsight/workflows/Upload%20Python%20Package/badge.svg
-    :target: https://github.com/CEMES-CNRS/pymodaq_plugins_oceaninsight
+.. image:: https://github.com/PyMoDAQ/pymodaq_plugins_oceaninsight/workflows/Upload%20Python%20Package/badge.svg
+    :target: https://github.com/PyMoDAQ/pymodaq_plugins_oceaninsight
 
 PyMoDAQ plugin for OceanInsight (OceanOptics) spectrometers
 

@@ -2,7 +2,7 @@
 
 [plugin-info]
 SHORT_PLUGIN_NAME = 'oceaninsight'  #for instance daqmx
-package-url = 'https://github.com/CEMES-CNRS/pymodaq_plugins_oceaninsight' #to modify
+package-url = 'https://github.com/PyMoDAQ/pymodaq_plugins_oceaninsight' #to modify
 description = 'Set of PyMoDAQ plugins for OceanInsight (OceanOptics) spectrometers'
 
 author = 'Sébastien Weber'

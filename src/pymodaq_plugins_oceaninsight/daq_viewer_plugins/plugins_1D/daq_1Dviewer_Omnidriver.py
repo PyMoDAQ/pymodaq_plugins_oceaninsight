@@ -1,12 +1,12 @@
 from qtpy import QtWidgets
-from pymodaq.daq_viewer.utility_classes import DAQ_Viewer_base
+from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base
 import numpy as np
 from collections import OrderedDict
 from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo, DataFromPlugins, Axis
 import sys
 import clr
 from easydict import EasyDict as edict
-from pymodaq.daq_viewer.utility_classes import comon_parameters
+from pymodaq.control_modules.viewer_utility_classes import comon_parameters
 
 
 
