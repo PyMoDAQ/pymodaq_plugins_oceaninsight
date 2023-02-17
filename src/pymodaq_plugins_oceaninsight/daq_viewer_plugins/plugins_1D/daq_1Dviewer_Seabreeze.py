@@ -1,6 +1,7 @@
 import numpy as np
 from easydict import EasyDict as edict
-from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo, DataFromPlugins, Axis
+from pymodaq.utils.daq_utils import ThreadCommand, getLineInfo
+from pymodaq.utils.data import DataFromPlugins, Axis
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base, comon_parameters, main
 from timeit import timeit
 
@@ -174,5 +175,6 @@ class DAQ_1DViewer_Seabreeze(DAQ_Viewer_base):
         # self.emit_status(ThreadCommand('Update_Status', ['Some info you want to log']))
         ##############################
 
+
 if __name__ == '__main__':
-    main(__file__)
+    main(__file__, init=False)

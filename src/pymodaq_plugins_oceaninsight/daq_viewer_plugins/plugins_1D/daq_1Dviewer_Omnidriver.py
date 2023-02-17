@@ -2,13 +2,12 @@ from qtpy import QtWidgets
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base
 import numpy as np
 from collections import OrderedDict
-from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo, DataFromPlugins, Axis
+from pymodaq.utils.daq_utils import ThreadCommand, getLineInfo
+from pymodaq.utils.data import DataFromPlugins, Axis
 import sys
 import clr
 from easydict import EasyDict as edict
 from pymodaq.control_modules.viewer_utility_classes import comon_parameters
-
-
 
 
 class DAQ_1DViewer_Omnidriver(DAQ_Viewer_base):
