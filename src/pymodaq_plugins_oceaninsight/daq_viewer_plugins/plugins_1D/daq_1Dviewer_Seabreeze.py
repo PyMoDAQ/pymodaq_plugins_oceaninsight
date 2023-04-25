@@ -35,7 +35,7 @@ class DAQ_1DViewer_Seabreeze(DAQ_Viewer_base):
 
     def __init__(self, parent=None, params_state=None):
         super().__init__(parent, params_state)
-        self.x_axis = None
+        self.x_axis: Axis = None
 
     def commit_settings(self, param):
         """
@@ -70,7 +70,7 @@ class DAQ_1DViewer_Seabreeze(DAQ_Viewer_base):
                     self.controller = controller
             else:
                 # From what I understand this will just get the spectro currently selected in the list
-                dvc = self.settings.child('device').value()
+                dvc = self.settings['device']
                 self.controller = Spectrometer(dvc)
                 self.controller.open()
                 #####################################
@@ -82,8 +82,7 @@ class DAQ_1DViewer_Seabreeze(DAQ_Viewer_base):
             # get the x_axis
             data_x_axis = self.controller.wavelengths()  # Way to get the x axis
             data_x_axis = data_x_axis[c0:]  # Get rid of the dark pixels
-            self.x_axis = Axis(data=data_x_axis, label='wavelength', units='nm')
-            self.emit_x_axis()
+            self.x_axis = Axis(data=data_x_axis, label='wavelength', units='nm', index=0)
 
             # Get the name
             specname = f"Ocean Insight {self.controller.model}"
@@ -94,7 +93,7 @@ class DAQ_1DViewer_Seabreeze(DAQ_Viewer_base):
                                 data=[np.zeros_like(data_x_axis)],
                                 dim='Data1D',
                                 labels=['Intensity'],
-                                x_axis=self.x_axis), ])
+                                axes=[self.x_axis]), ])
 
             # Update the parameters
             # Here we need to do a few things. Get the integration time limits and set it in the settings
@@ -150,7 +149,7 @@ class DAQ_1DViewer_Seabreeze(DAQ_Viewer_base):
         c0 = self.settings.child('advanced').child('dark_channels').value()
         # synchrone version (blocking function)
         # Pseudo-hardware-averaging
-        if Naverage>1:
+        if Naverage > 1:
             data = [self.controller.intensities(correct_nonlinearity=nlc)[c0:] for i in range(Naverage)]
             data = np.array(data)
             data = data.mean(0)
@@ -158,7 +157,8 @@ class DAQ_1DViewer_Seabreeze(DAQ_Viewer_base):
         else:
             data = self.controller.intensities(correct_nonlinearity=nlc)[c0:]
 
-        data_emit = DataFromPlugins(name='oceanseabreeze', data=[data], dim='Data1D', labels=['spectrum'])
+        data_emit = DataFromPlugins(name='oceanseabreeze', data=[data], dim='Data1D', labels=['spectrum'],
+                                    axes=[self.x_axis.copy()])
 
         self.data_grabed_signal.emit([data_emit])
         #########################################################
