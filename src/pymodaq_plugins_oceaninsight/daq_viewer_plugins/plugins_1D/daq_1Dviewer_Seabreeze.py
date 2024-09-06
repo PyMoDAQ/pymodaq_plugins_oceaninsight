@@ -61,75 +61,63 @@ class DAQ_1DViewer_Seabreeze(DAQ_Viewer_base):
             *initialized: (bool): False if initialization failed otherwise True
         """
 
-        try:
-            self.status.update(edict(initialized=False, info="", x_axis=None, y_axis=None, controller=None))
-            if self.settings.child('controller_status').value() == "Slave":
-                if controller is None:
-                    raise Exception('no controller has been defined externally while this detector is a slave one')
-                else:
-                    self.controller = controller
-            else:
-                # From what I understand this will just get the spectro currently selected in the list
-                dvc = self.settings['device']
-                self.controller = Spectrometer(dvc)
-                self.controller.open()
-                #####################################
+        self.ini_detector_init(controller, None)
 
-            # Oceanoptics spectrometers (at least the ones i Know) have fixed axis
-            # get inactive pixels
-            c0 = self.controller.f.spectrometer.get_electric_dark_pixel_indices()[-1]
-            self.settings.child('advanced').child('dark_channels').setValue(c0)
-            # get the x_axis
-            data_x_axis = self.controller.wavelengths()  # Way to get the x axis
-            data_x_axis = data_x_axis[c0:]  # Get rid of the dark pixels
-            self.x_axis = Axis(data=data_x_axis, label='wavelength', units='nm', index=0)
+        if self.is_master:
+            # From what I understand this will just get the spectro currently selected in the list
+            dvc = self.settings['device']
+            self.controller = Spectrometer(dvc)
+            self.controller.open()
+            #####################################
 
-            # Get the name
-            specname = f"Ocean Insight {self.controller.model}"
+        # Oceanoptics spectrometers (at least the ones i Know) have fixed axis
+        # get inactive pixels
+        c0 = self.controller.f.spectrometer.get_electric_dark_pixel_indices()[-1]
+        self.settings.child('advanced').child('dark_channels').setValue(c0)
+        # get the x_axis
+        data_x_axis = self.controller.wavelengths()  # Way to get the x axis
+        data_x_axis = data_x_axis[c0:]  # Get rid of the dark pixels
+        self.x_axis = Axis(data=data_x_axis, label='wavelength', units='nm', index=0)
 
-            # initialize viewers pannel with the future type of data
-            self.data_grabed_signal_temp.emit([
-                DataFromPlugins(name=specname,
-                                data=[np.zeros_like(data_x_axis)],
-                                dim='Data1D',
-                                labels=['Intensity'],
-                                axes=[self.x_axis]), ])
+        # Get the name
+        specname = f"Ocean Insight {self.controller.model}"
 
-            # Update the parameters
-            # Here we need to do a few things. Get the integration time limits and set it in the settings
-            tlimits = np.array(self.controller.integration_time_micros_limits) / 1000
-            self.settings.child('integration').setLimits(tlimits)
-            # Here we need to update the advanced parameters
-            advanced_settings = self.settings.child('advanced')
-            sn = self.controller.serial_number
-            advanced_settings.child('serial_number').setValue(sn)
-            # non linearity coefficients
-            nlc_feat = self.controller.f.nonlinearity_coefficients
-            if nlc_feat is not None and not any(np.isnan(nlc_feat.get_nonlinearity_coefficients())):
-                advanced_settings.child('correct_non_linearity').setValue(True)
-            else:
-                advanced_settings.child('correct_non_linearity').setValue(False)
-                advanced_settings.child('correct_non_linearity').setOpts(enabled=False)
+        # initialize viewers pannel with the future type of data
+        self.data_grabed_signal_temp.emit([
+            DataFromPlugins(name=specname,
+                            data=[np.zeros_like(data_x_axis)],
+                            dim='Data1D',
+                            labels=['Intensity'],
+                            axes=[self.x_axis]), ])
 
-            # measure the readout time
-            Nperf = 200
-            self.settings.child('integration').setValue(tlimits[0])  # Update the parameter value to the lower limit
-            self.controller.integration_time_micros(tlimits[0]*1000)  # Set the readout time to lower limit
-            perf = timeit(lambda: self.controller.intensities(), number=Nperf)  # time the execution of code in [s]
-            self.settings.child('advanced').child('readout_time').setValue(1000*perf/Nperf)  # set the settings
+        # Update the parameters
+        # Here we need to do a few things. Get the integration time limits and set it in the settings
+        tlimits = np.array(self.controller.integration_time_micros_limits) / 1000
+        self.settings.child('integration').setLimits(tlimits)
+        # Here we need to update the advanced parameters
+        advanced_settings = self.settings.child('advanced')
+        sn = self.controller.serial_number
+        advanced_settings.child('serial_number').setValue(sn)
+        # non linearity coefficients
+        nlc_feat = self.controller.f.nonlinearity_coefficients
+        if nlc_feat is not None and not any(np.isnan(nlc_feat.get_nonlinearity_coefficients())):
+            advanced_settings.child('correct_non_linearity').setValue(True)
+        else:
+            advanced_settings.child('correct_non_linearity').setValue(False)
+            advanced_settings.child('correct_non_linearity').setOpts(enabled=False)
 
-            ##############################
+        # measure the readout time
+        Nperf = 200
+        self.settings.child('integration').setValue(tlimits[0])  # Update the parameter value to the lower limit
+        self.controller.integration_time_micros(tlimits[0]*1000)  # Set the readout time to lower limit
+        perf = timeit(lambda: self.controller.intensities(), number=Nperf)  # time the execution of code in [s]
+        self.settings.child('advanced').child('readout_time').setValue(1000*perf/Nperf)  # set the settings
 
-            self.status.info = f"Initialized {specname} spectrometer"
-            self.status.initialized = True
-            self.status.controller = self.controller
-            return self.status
+        ##############################
 
-        except Exception as e:
-            self.emit_status(ThreadCommand('Update_Status', [getLineInfo() + str(e), 'log']))
-            self.status.info = getLineInfo() + str(e)
-            self.status.initialized = False
-            return self.status
+        info = f"Initialized {specname} spectrometer"
+        initialized = True
+        return info, initialized
 
     def close(self):
         """
