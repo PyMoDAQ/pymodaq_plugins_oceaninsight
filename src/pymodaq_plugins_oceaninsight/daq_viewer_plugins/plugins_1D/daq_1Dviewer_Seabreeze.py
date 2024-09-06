@@ -126,7 +126,6 @@ class DAQ_1DViewer_Seabreeze(DAQ_Viewer_base):
         if self.controller is not None:
             self.controller.close()
 
-
     def grab_data(self, Naverage = 1, **kwargs):
         """
         Parameters

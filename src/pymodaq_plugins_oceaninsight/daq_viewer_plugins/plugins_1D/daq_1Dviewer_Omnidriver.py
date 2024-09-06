@@ -153,10 +153,10 @@ class DAQ_1DViewer_Omnidriver(DAQ_Viewer_base):
                     dte.append(
                       DataFromPlugins(name=self.spectro_names[ind_spectro],
                                       data=[data_array], dim='Data1D',
-                                     axes=[Axis('wavelength',
-                                                units='m',
-                                                data=self.get_xaxis(ind_spectro)
-                                                * 1e-9)])))
+                                      axes=[Axis('wavelength',
+                                                 units='m',
+                                                 data=self.get_xaxis(ind_spectro)
+                                                      * 1e-9)]))
                     QtWidgets.QApplication.processEvents()
 
             self.dte_signal.emit(dte)
