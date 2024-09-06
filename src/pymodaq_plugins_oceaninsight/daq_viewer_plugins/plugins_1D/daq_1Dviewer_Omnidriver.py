@@ -1,5 +1,6 @@
 from qtpy import QtWidgets
-from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base, main
+from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base, comon_parameters, main
+
 import numpy as np
 from collections import OrderedDict
 from pymodaq.utils.daq_utils import ThreadCommand, getLineInfo
@@ -7,7 +8,6 @@ from pymodaq.utils.data import DataFromPlugins, Axis, DataToExport
 import sys
 import clr
 from easydict import EasyDict as edict
-from pymodaq.control_modules.viewer_utility_classes import comon_parameters
 
 from pymodaq_plugins_oceaninsight.utils import Config
 
@@ -41,7 +41,6 @@ class DAQ_1DViewer_Omnidriver(DAQ_Viewer_base):
     utility_classes.DAQ_Viewer_base
     """
 
-
     params = comon_parameters + [
         {'title': 'N spectrometers:', 'name': 'Nspectrometers', 'type': 'int', 'value': 0,
          'default': 0, 'min': 0, 'readonly': True},
@@ -55,6 +54,7 @@ class DAQ_1DViewer_Omnidriver(DAQ_Viewer_base):
         self.controller: omnidriver.NETWrapper = None
         self.spectro_names = [] #contains the spectro name as returned from the wrapper
         self.spectro_id = [] # contains the spectro id as set by the ini_detector method and equal to the Parameter name
+
 
     def commit_settings(self, param):
         """
@@ -73,7 +73,6 @@ class DAQ_1DViewer_Omnidriver(DAQ_Viewer_base):
             --------
             set_Mock_data, daq_utils.ThreadCommand
         """
-
         self.ini_detector_init(controller, None)
 
         if self.is_master:
@@ -83,17 +82,19 @@ class DAQ_1DViewer_Omnidriver(DAQ_Viewer_base):
             self.settings.child('Nspectrometers').setValue(N)
             self.spectro_names = []
             self.spectro_id = []
-            data_init = []
+
+            data_init = DataToExport('Spectro')
 
             for ind_spectro in range(N):
-                name=self.controller.getName(ind_spectro)
+                name = self.controller.getName(ind_spectro)
                 self.spectro_names.append(name)
                 self.spectro_id.append('spectro{:d}'.format(ind_spectro))
 
-                exp_max=self.controller.getMaximumIntegrationTime(ind_spectro)
-                exp_min=self.controller.getMinimumIntegrationTime(ind_spectro)
-                exp=self.controller.getIntegrationTime(ind_spectro)/1000
+                exp_max = self.controller.getMaximumIntegrationTime(ind_spectro)
+                exp_min = self.controller.getMinimumIntegrationTime(ind_spectro)
+                exp = self.controller.getIntegrationTime(ind_spectro) / 1000
                 wavelengths = self.get_xaxis(ind_spectro)
+
                 data_init.append(DataFromPlugins(name=name, data=[np.zeros_like(wavelengths)],
                                                  dim='Data1D',
                                                  x_axis=Axis(data=wavelengths, label='Wavelength',
@@ -108,24 +109,25 @@ class DAQ_1DViewer_Omnidriver(DAQ_Viewer_base):
                                  'value': True},
                             {'title': 'Exposure time (ms):','name': 'exposure_time', 'type': 'int',
                              'value': int(exp), 'min': int(exp_min/1000), 'max': int(exp_max/1000)},
+
                             ]
-                            })
+                             })
                     except:
                         pass
-
 
                 QtWidgets.QApplication.processEvents()
 
             #init viewers
+
             if N == 0:
                 raise Exception('No detected hardware')
-            self.data_grabed_signal_temp.emit(data_init)
+            self.dte_signal_temp.emit(data_init)
 
-            initialized = True
-            info = 'Ocean Insight Spectrometers initialized'
-            return info, initialized
+        initialized = True
+        info = 'Ocean Insight Spectrometers initialized'
+        return info, initialized
 
-    def get_xaxis(self,ind_spectro):
+    def get_xaxis(self, ind_spectro):
         wavelengths_chelou = self.controller.getWavelengths(ind_spectro)
         wavelengths = np.array([wavelengths_chelou[ind] for ind in range(len(wavelengths_chelou))])
 
@@ -133,36 +135,35 @@ class DAQ_1DViewer_Omnidriver(DAQ_Viewer_base):
 
     def close(self):
         """
-            Not implemented.
         """
-        self.controller.closeAllSpectrometers()
+        if self.controller is not None:
+            self.controller.closeAllSpectrometers()
 
     def grab_data(self, Naverage=1, **kwargs):
         """
 
         """
         try:
-            data_list = []
+            dte = DataToExport('Spectro')
             for ind_spectro in range(len(self.spectro_names)):
-                if self.settings.child('spectrometers', 'spectro{:d}'.format(ind_spectro),
-                                       'grab').value():
+                if self.settings.child('spectrometers', 'spectro{:d}'.format(ind_spectro), 'grab').value():
                     self.controller.setScansToAverage(ind_spectro, Naverage)
                     data_chelou = self.controller.getSpectrum(ind_spectro)
-                    data = np.array([data_chelou[ind] for ind in range(len(data_chelou))])
-                    data_list.append(DataFromPlugins(name=self.spectro_names[ind_spectro],
-                                                     data=[data],
-                                                     dim='Data1D',
-                                                     axes=[Axis('wavelength',
-                                                                units='m',
-                                                                data=self.get_xaxis(ind_spectro)
-                                                                     * 1e-9)]))
+                    data_array = np.array([data_chelou[ind] for ind in range(len(data_chelou))])
+                    dte.append(
+                      DataFromPlugins(name=self.spectro_names[ind_spectro],
+                                      data=[data_array], dim='Data1D',
+                                     axes=[Axis('wavelength',
+                                                units='m',
+                                                data=self.get_xaxis(ind_spectro)
+                                                * 1e-9)])))
+                    QtWidgets.QApplication.processEvents()
 
-            self.dte_signal.emit(
-                DataToExport(name='OceanInsight',
-                             data = data_list))
+            self.dte_signal.emit(dte)
+
 
         except Exception as e:
-            self.emit_status(ThreadCommand('Update_Status',[getLineInfo()+ str(e),"log"]))
+            self.emit_status(ThreadCommand('Update_Status', [getLineInfo() + str(e), "log"]))
 
     def stop(self):
         """

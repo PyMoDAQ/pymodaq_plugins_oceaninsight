@@ -1,7 +1,7 @@
 import numpy as np
 from easydict import EasyDict as edict
 from pymodaq.utils.daq_utils import ThreadCommand, getLineInfo
-from pymodaq.utils.data import DataFromPlugins, Axis
+from pymodaq.utils.data import DataFromPlugins, Axis, DataToExport
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base, comon_parameters, main
 from timeit import timeit
 
@@ -33,9 +33,8 @@ class DAQ_1DViewer_Seabreeze(DAQ_Viewer_base):
         ]}
     ]
 
-    def __init__(self, parent=None, params_state=None):
-        super().__init__(parent, params_state)
-        self.x_axis: Axis = None
+    def ini_attributes(self):
+        self.controller: Spectrometer = None
 
     def commit_settings(self, param):
         """
@@ -60,7 +59,6 @@ class DAQ_1DViewer_Seabreeze(DAQ_Viewer_base):
             * controller (object) initialized controller
             *initialized: (bool): False if initialization failed otherwise True
         """
-
         self.ini_detector_init(controller, None)
 
         if self.is_master:
@@ -76,19 +74,21 @@ class DAQ_1DViewer_Seabreeze(DAQ_Viewer_base):
         self.settings.child('advanced').child('dark_channels').setValue(c0)
         # get the x_axis
         data_x_axis = self.controller.wavelengths()  # Way to get the x axis
-        data_x_axis = data_x_axis[c0:]  # Get rid of the dark pixels
-        self.x_axis = Axis(data=data_x_axis, label='wavelength', units='nm', index=0)
+        data_x_axis = data_x_axis[c0:] * 1e9  # Get rid of the dark pixels
+        self.x_axis = Axis(data=data_x_axis, label='wavelength', units='m', index=0)
 
         # Get the name
         specname = f"Ocean Insight {self.controller.model}"
 
         # initialize viewers pannel with the future type of data
+
         self.data_grabed_signal_temp.emit([
             DataFromPlugins(name=specname,
                             data=[np.zeros_like(data_x_axis)],
                             dim='Data1D',
                             labels=['Intensity'],
                             axes=[self.x_axis]), ])
+
 
         # Update the parameters
         # Here we need to do a few things. Get the integration time limits and set it in the settings
@@ -123,8 +123,9 @@ class DAQ_1DViewer_Seabreeze(DAQ_Viewer_base):
         """
         Terminate the communication protocol
         """
-        self.controller.close()
-        ##
+        if self.controller is not None:
+            self.controller.close()
+
 
     def grab_data(self, Naverage = 1, **kwargs):
         """
@@ -145,23 +146,12 @@ class DAQ_1DViewer_Seabreeze(DAQ_Viewer_base):
         else:
             data = self.controller.intensities(correct_nonlinearity=nlc)[c0:]
 
-        data_emit = DataFromPlugins(name='oceanseabreeze', data=[data], dim='Data1D', labels=['spectrum'],
-                                    axes=[self.x_axis.copy()])
-
-        self.data_grabed_signal.emit([data_emit])
-        #########################################################
-
-    def callback(self):
-        """optional asynchrone method called when the detector has finished its acquisition of data"""
-        pass
-        # data_tot = self.controller.your_method_to_get_data_from_buffer()
-        # self.data_grabed_signal.emit([DataFromPlugins(name='Mock1', data=data_tot,
-        #                                           dim='Data1D', labels=['dat0', 'data1'])])
+        self.dte_signal.emit(DataToExport('Spectro', data=[
+            DataFromPlugins(name='oceanseabreeze', data=[data], dim='Data1D',
+                            labels=['spectrum'], axes=[self.x_axis.copy()])]))
 
     def stop(self):
         pass
-        # self.emit_status(ThreadCommand('Update_Status', ['Some info you want to log']))
-        ##############################
 
 
 if __name__ == '__main__':
