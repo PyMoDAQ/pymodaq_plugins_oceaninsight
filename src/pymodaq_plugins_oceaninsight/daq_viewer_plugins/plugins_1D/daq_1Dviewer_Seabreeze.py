@@ -59,12 +59,9 @@ class DAQ_1DViewer_Seabreeze(DAQ_Viewer_base):
             * controller (object) initialized controller
             *initialized: (bool): False if initialization failed otherwise True
         """
-        if self.settings.child('controller_status').value() == "Slave":
-            if controller is None:
-                raise Exception('no controller has been defined externally while this detector is a slave one')
-            else:
-                self.controller = controller
-        else:
+        self.ini_detector_init(controller, None)
+
+        if self.is_master:
             # From what I understand this will just get the spectro currently selected in the list
             dvc = self.settings['device']
             self.controller = Spectrometer(dvc)
@@ -77,19 +74,21 @@ class DAQ_1DViewer_Seabreeze(DAQ_Viewer_base):
         self.settings.child('advanced').child('dark_channels').setValue(c0)
         # get the x_axis
         data_x_axis = self.controller.wavelengths()  # Way to get the x axis
-        data_x_axis = data_x_axis[c0:]  # Get rid of the dark pixels
-        self.x_axis = Axis(data=data_x_axis, label='wavelength', units='nm', index=0)
+        data_x_axis = data_x_axis[c0:] * 1e9  # Get rid of the dark pixels
+        self.x_axis = Axis(data=data_x_axis, label='wavelength', units='m', index=0)
 
         # Get the name
         specname = f"Ocean Insight {self.controller.model}"
 
         # initialize viewers pannel with the future type of data
-        self.dte_signal_temp.emit(DataToExport('Spectro', data=[
+
+        self.data_grabed_signal_temp.emit([
             DataFromPlugins(name=specname,
                             data=[np.zeros_like(data_x_axis)],
                             dim='Data1D',
                             labels=['Intensity'],
-                            axes=[self.x_axis]),]))
+                            axes=[self.x_axis]), ])
+
 
         # Update the parameters
         # Here we need to do a few things. Get the integration time limits and set it in the settings

@@ -1,5 +1,6 @@
 from qtpy import QtWidgets
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base, comon_parameters, main
+
 import numpy as np
 from collections import OrderedDict
 from pymodaq.utils.daq_utils import ThreadCommand, getLineInfo
@@ -7,6 +8,19 @@ from pymodaq.utils.data import DataFromPlugins, Axis, DataToExport
 import sys
 import clr
 from easydict import EasyDict as edict
+
+from pymodaq_plugins_oceaninsight.utils import Config
+
+plugin_config = Config()
+
+omnidriver_path = plugin_config('omnidriver_path')
+try:
+    sys.path.append(omnidriver_path)
+    clr.AddReference("NETOmniDriver-NET40")
+    import OmniDriver as omnidriver
+
+except:
+    omnidriver = None
 
 
 class DAQ_1DViewer_Omnidriver(DAQ_Viewer_base):
@@ -26,48 +40,30 @@ class DAQ_1DViewer_Omnidriver(DAQ_Viewer_base):
     --------
     utility_classes.DAQ_Viewer_base
     """
-    omnidriver_path = 'C:\\Program Files\\Ocean Optics\\OmniDriver\\OOI_HOME'
-    try:
-        sys.path.append(omnidriver_path)
-        clr.AddReference("NETOmniDriver-NET40")
-        import OmniDriver as omnidriver
-
-    except:
-        omnidriver = None
 
     params = comon_parameters + [
-        {'title': 'Omnidriver path:', 'name': 'omnidriver_path', 'type': 'browsepath', 'value': omnidriver_path},
-        {'title': 'N spectrometers:', 'name': 'Nspectrometers', 'type': 'int', 'value': 0, 'default': 0, 'min': 0},
+        {'title': 'N spectrometers:', 'name': 'Nspectrometers', 'type': 'int', 'value': 0,
+         'default': 0, 'min': 0, 'readonly': True},
         {'title': 'Spectrometers:', 'name': 'spectrometers', 'type': 'group', 'children': []},
-    ]
+        ]
 
     hardware_averaging = True
 
     def ini_attributes(self):
 
-        self.controller: self.omnidriver.NETWrapper = None
-        self.spectro_names = []  # contains the spectro name as returned from the wrapper
-        self.spectro_id = []  # contains the spectro id as set by the ini_detector method and equal to the Parameter name
+        self.controller: omnidriver.NETWrapper = None
+        self.spectro_names = [] #contains the spectro name as returned from the wrapper
+        self.spectro_id = [] # contains the spectro id as set by the ini_detector method and equal to the Parameter name
+
 
     def commit_settings(self, param):
         """
-
         """
         if param.name() == 'exposure_time':
             ind_spectro = self.spectro_id.index(param.parent().name())
             self.controller.setIntegrationTime(ind_spectro, param.value() * 1000)
 
             param.setValue(self.controller.getIntegrationTime(ind_spectro) / 1000)
-
-
-        elif param.name() == 'omnidriver_path':
-            try:
-                sys.path.append(param.value())
-                clr.AddReference("NETOmniDriver-NET40")
-                import OmniDriver
-                self.omnidriver = OmniDriver
-            except:
-                pass
 
     def ini_detector(self, controller=None):
         """
@@ -77,20 +73,18 @@ class DAQ_1DViewer_Omnidriver(DAQ_Viewer_base):
             --------
             set_Mock_data, daq_utils.ThreadCommand
         """
-        if self.settings['controller_status'] == "Slave":
-            if controller is None:
-                raise Exception('no controller has been defined externally while this axe is a slave one')
-            else:
-                self.controller = controller
-        else:  # Master stage
+        self.ini_detector_init(controller, None)
 
-            self.controller = self.omnidriver.NETWrapper()
+        if self.is_master:
+            self.controller = omnidriver.NETWrapper()
 
             N = self.controller.openAllSpectrometers()
             self.settings.child('Nspectrometers').setValue(N)
             self.spectro_names = []
             self.spectro_id = []
+
             data_init = DataToExport('Spectro')
+
             for ind_spectro in range(N):
                 name = self.controller.getName(ind_spectro)
                 self.spectro_names.append(name)
@@ -100,32 +94,38 @@ class DAQ_1DViewer_Omnidriver(DAQ_Viewer_base):
                 exp_min = self.controller.getMinimumIntegrationTime(ind_spectro)
                 exp = self.controller.getIntegrationTime(ind_spectro) / 1000
                 wavelengths = self.get_xaxis(ind_spectro)
-                data_init.append(DataFromPlugins(name=name, data=[np.zeros_like(wavelengths)], dim='Data1D',
-                                                 axes=[Axis(data=wavelengths, label='Wavelength', units='nm')]
-                                                 ))
-                for ind in range(2):  # this is to take into account that adding it once doen't work
-                    # (see pyqtgraph Parameter...)
+
+                data_init.append(DataFromPlugins(name=name, data=[np.zeros_like(wavelengths)],
+                                                 dim='Data1D',
+                                                 x_axis=Axis(data=wavelengths, label='Wavelength',
+                                                             units='nm')))
+
+                for ind in range(2): #this is to take into account that adding it once doen't work (see pyqtgraph Parameter...)
                     try:
                         self.settings.child('spectrometers').addChild(
-                            {'title': name, 'name': 'spectro{:d}'.format(ind_spectro), 'type': 'group', 'children': [
-                                {'title': 'grab spectrum:', 'name': 'grab', 'type': 'bool', 'value': True},
-                                {'title': 'Exposure time (ms):', 'name': 'exposure_time', 'type': 'int',
-                                 'value': int(exp), 'min': int(exp_min / 1000), 'max': int(exp_max / 1000)},
+                            {'title': name,'name': 'spectro{:d}'.format(ind_spectro),
+                             'type': 'group', 'children':[
+                                {'title': 'grab spectrum:','name': 'grab', 'type': 'bool',
+                                 'value': True},
+                            {'title': 'Exposure time (ms):','name': 'exposure_time', 'type': 'int',
+                             'value': int(exp), 'min': int(exp_min/1000), 'max': int(exp_max/1000)},
+
                             ]
                              })
                     except:
                         pass
 
                 QtWidgets.QApplication.processEvents()
-                # init viewers
+
+            #init viewers
+
             if N == 0:
                 raise Exception('No detected hardware')
             self.dte_signal_temp.emit(data_init)
 
         initialized = True
-        info = ''
+        info = 'Ocean Insight Spectrometers initialized'
         return info, initialized
-
 
     def get_xaxis(self, ind_spectro):
         wavelengths_chelou = self.controller.getWavelengths(ind_spectro)
@@ -150,10 +150,17 @@ class DAQ_1DViewer_Omnidriver(DAQ_Viewer_base):
                     self.controller.setScansToAverage(ind_spectro, Naverage)
                     data_chelou = self.controller.getSpectrum(ind_spectro)
                     data_array = np.array([data_chelou[ind] for ind in range(len(data_chelou))])
-                    dte.append(DataFromPlugins(name=self.spectro_names[ind_spectro], data=[data_array], dim='Data1D'))
+                    dte.append(
+                      DataFromPlugins(name=self.spectro_names[ind_spectro],
+                                      data=[data_array], dim='Data1D',
+                                     axes=[Axis('wavelength',
+                                                units='m',
+                                                data=self.get_xaxis(ind_spectro)
+                                                * 1e-9)])))
                     QtWidgets.QApplication.processEvents()
 
             self.dte_signal.emit(dte)
+
 
         except Exception as e:
             self.emit_status(ThreadCommand('Update_Status', [getLineInfo() + str(e), "log"]))
@@ -167,4 +174,4 @@ class DAQ_1DViewer_Omnidriver(DAQ_Viewer_base):
 
 
 if __name__ == '__main__':
-    main(__file__)
+    main(__file__, init=False)
