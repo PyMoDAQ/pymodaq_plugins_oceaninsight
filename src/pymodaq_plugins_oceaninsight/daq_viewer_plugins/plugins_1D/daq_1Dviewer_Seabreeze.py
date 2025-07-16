@@ -71,12 +71,16 @@ class DAQ_1DViewer_Seabreeze(DAQ_Viewer_base):
 
         # Oceanoptics spectrometers (at least the ones i Know) have fixed axis
         # get inactive pixels
-        c0 = self.controller.f.spectrometer.get_electric_dark_pixel_indices()[-1]
-        self.settings.child('advanced').child('dark_channels').setValue(c0)
+        dark_indices = self.controller.f.spectrometer.get_electric_dark_pixel_indices()
+        #self.settings.child('advanced').child('dark_channels').setValue(dark_indices)
         # get the x_axis
         data_x_axis = self.controller.wavelengths()  # Way to get the x axis
-        data_x_axis = data_x_axis[c0:] * 1e9  # Get rid of the dark pixels
-        self.x_axis = Axis(data=data_x_axis, label='wavelength', units='m', index=0)
+        # keep range without dark pixels
+        x_indices = np.arange(data_x_axis.shape[0])
+        self.valid_range = np.setdiff1d(x_indices, dark_indices)
+        data_x_axis = data_x_axis[self.valid_range]
+        # generate PyMoDAQ axis
+        self.x_axis = Axis(data=data_x_axis * 1e-9, label='wavelength', units='m', index=0)
 
         # Get the name
         specname = f"Ocean Insight {self.controller.model}"
@@ -135,16 +139,18 @@ class DAQ_1DViewer_Seabreeze(DAQ_Viewer_base):
         kwargs: (dict) of others optionals arguments
         """
         nlc = self.settings.child('advanced').child('correct_non_linearity').value()
-        c0 = self.settings.child('advanced').child('dark_channels').value()
+        #c0 = self.settings.child('advanced').child('dark_channels').value()
+
         # synchrone version (blocking function)
         # Pseudo-hardware-averaging
         if Naverage > 1:
-            data = [self.controller.intensities(correct_nonlinearity=nlc)[c0:] for i in range(Naverage)]
+            data = [self.controller.intensities(correct_nonlinearity=nlc)[self.valid_range]
+                    for i in range(Naverage)]
             data = np.array(data)
             data = data.mean(0)
         # Otherwise normal single-acquisition
         else:
-            data = self.controller.intensities(correct_nonlinearity=nlc)[c0:]
+            data = self.controller.intensities(correct_nonlinearity=nlc)[self.valid_range]
 
         self.dte_signal.emit(DataToExport('Spectro', data=[
             DataFromPlugins(name='oceanseabreeze', data=[data], dim='Data1D',
