@@ -29,7 +29,7 @@ class DAQ_1DViewer_Seabreeze(DAQ_Viewer_base):
             {'title': 'Non Linearity correction:', 'name': 'correct_non_linearity', 'type': 'bool', 'value': False},
             {'title': 'Max Intensity', 'name': 'max_intensity', 'type': "float", 'value': 65535, 'readonly': True},
             {'title': 'Pixels:', 'name': 'pixels', 'type': 'int', 'value': 2048, 'readonly': True},
-            {'title': 'Dark Channels:', 'name': 'dark_channels', 'type': 'int', 'value': 10, 'readonly': True},
+            {'title': 'Dark Channels:', 'name': 'dark_channels', 'type': 'str', 'value': '', 'readonly': True},
             {'title': 'Readout Time (ms)', 'name': 'readout_time', 'type': 'float', 'value': 666, 'readonly': True},
         ]}
     ]
@@ -70,9 +70,9 @@ class DAQ_1DViewer_Seabreeze(DAQ_Viewer_base):
             #####################################
 
         # Oceanoptics spectrometers (at least the ones i Know) have fixed axis
-        # get inactive pixels
+        # get index of inactive pixels
         dark_indices = self.controller.f.spectrometer.get_electric_dark_pixel_indices()
-        #self.settings.child('advanced').child('dark_channels').setValue(dark_indices)
+        self.settings.child('advanced').child('dark_channels').setValue(", ".join([str(x) for x in dark_indices]))
         # get the x_axis
         data_x_axis = self.controller.wavelengths()  # Way to get the x axis
         # keep range without dark pixels
