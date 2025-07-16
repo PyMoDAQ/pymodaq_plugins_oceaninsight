@@ -12,14 +12,15 @@ from seabreeze.spectrometers import Spectrometer, list_devices
 
 
 class DAQ_1DViewer_Seabreeze(DAQ_Viewer_base):
-    """
-    """
+    """PyMoDAQ 1DViewer class for devices supported by the Seabreeze library."""
+
     # Upon initialisation
     devices = list_devices()
 
-    #Supports pseudo hardware-averaging
+    # Supports pseudo hardware-averaging
     hardware_averaging = True
 
+    # Adjustable parameters
     params = comon_parameters + [
         {'title': 'Device:', 'name': 'device', 'type': 'list', 'limits': devices},
         {'title': 'Integration (ms):', 'name': 'integration', 'type': 'float', 'value': 1.0},
