@@ -20,6 +20,7 @@ Authors
 
 * Sebastien J. Weber
 * Nicolas Tappy
+* Arnaud Meyer
 
 Instruments
 ===========
