@@ -12,9 +12,12 @@ package-url = "https://github.com/PyMoDAQ/pymodaq_plugins_oceaninsight"
 name = "pymodaq_plugins_oceaninsight"
 description = "Set of PyMoDAQ plugins for OceanInsight (OceanOptics) spectrometers"
 dependencies = [
+    "pymodaq>=5.3.2",
+    "pymodaq_utils>=5.3.1",
+    "pymodaq_gui>=5.3.0",
+    "pymodaq_data>=5.3.0",
     "pythonnet",
     "seabreeze",
-    "pymodaq>=4.3.0",
 ]
 
 authors = [
