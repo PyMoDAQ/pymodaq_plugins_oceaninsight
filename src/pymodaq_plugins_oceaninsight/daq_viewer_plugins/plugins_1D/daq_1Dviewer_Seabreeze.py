@@ -60,14 +60,14 @@ class DAQ_1DViewer_Seabreeze(DAQ_Viewer_base):
             * controller (object) initialized controller
             *initialized: (bool): False if initialization failed otherwise True
         """
-        self.ini_detector_init(controller, None)
-
         if self.is_master:
             # From what I understand this will just get the spectro currently selected in the list
             dvc = self.settings['device']
             self.controller = Spectrometer(dvc)
-            self.controller.open()
-            #####################################
+            #self.controller.open()
+
+        else:
+            self.controller = controller
 
         # Oceanoptics spectrometers (at least the ones i Know) have fixed axis
         # get index of inactive pixels
