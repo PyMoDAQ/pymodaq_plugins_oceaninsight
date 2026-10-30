@@ -41,6 +41,8 @@ class DAQ_1DViewer_Omnidriver(DAQ_Viewer_base):
     utility_classes.DAQ_Viewer_base
     """
 
+    supported_platforms = ('win32',)  # the OmniDriver .NET driver
+
     params = comon_parameters + [
         {'title': 'N spectrometers:', 'name': 'Nspectrometers', 'type': 'int', 'value': 0,
          'default': 0, 'min': 0, 'readonly': True},
